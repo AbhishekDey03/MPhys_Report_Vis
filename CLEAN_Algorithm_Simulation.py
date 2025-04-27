@@ -3,7 +3,7 @@ from scipy.signal import fftconvolve
 
 class RadioImagerCLEAN:
     
-    def __init__(self, image_size = 150, fov = 1.0, fill_frac=0.5, uv_taper_fwhm_frac:float|None=None):
+    def __init__(self, image_size = 256, fov = 1.0, fill_frac=0.25, uv_taper_fwhm_frac:float|None=None):
         """
         Initializes the RadioImagerCLEAN class.
 
@@ -55,26 +55,78 @@ class RadioImagerCLEAN:
 
         return np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(sky)))
 
-    def sample_uv(self, seed: int =8032003) -> np.ndarray:
+    def sample_uv(self,
+                n_antennas: int = 10,
+                n_times:    int = 240,
+                seed:       int = 0
+                ) -> np.ndarray:
         """
-        Generates a random sampling mask over the u-v plane based on the fill fraction.
+        Simulate Earth-rotation aperture synthesis uv-coverage.
 
-        Ensures the central zero-spacing (u = 0, v = 0) is always included.
+        For a given array of `n_antennas` (randomly laid out in a disk)
+        and `n_times` samples over a full 360° rotation, this builds
+        all baselines and rotates them through hour angle to trace uv-tracks.
 
-        Parameters:
-        - seed (int): Random seed for reproducibility.
+        Parameters
+        ----------
+        n_antennas : int
+            Number of antennas in the array.
+        n_times : int
+            Number of time samples (i.e. rotation steps over 0→2π).
+        seed : int
+            RNG seed for reproducible antenna layouts.
 
-        Returns:
-        - np.ndarray: Boolean mask array indicating sampled u-v points.
+        Returns
+        -------
+        mask : np.ndarray (bool)
+            Boolean sampling mask of shape (image_size, image_size),
+            with True wherever a u-v point is “measured.”
         """
+        N      = self.image_size
+        centre = N // 2
+        rng    = np.random.default_rng(seed)
 
-        rng = np.random.default_rng(seed)
-        mask = np.zeros((self.image_size, self.image_size), dtype=bool)
-        n = int(self.fill_frac * self.image_size**2)
-        idx = rng.choice(self.image_size**2, size=n, replace=False)
-        mask.flat[idx] = True
-        mask[self.image_size//2, self.image_size//2] = True
+        # 1) Random antenna positions in a disk of radius N/4 pixels
+        φ = rng.uniform(0, 2*np.pi, size=n_antennas)
+        r = rng.uniform(0, N/4,      size=n_antennas)
+        ant_x = r * np.cos(φ)
+        ant_y = r * np.sin(φ)
+
+        # 2) All unique baselines (i < j)
+        baselines = []
+        for i in range(n_antennas):
+            for j in range(i+1, n_antennas):
+                baselines.append((ant_x[j] - ant_x[i],
+                                ant_y[j] - ant_y[i]))
+        baselines = np.array(baselines)
+
+        # 3) Time sampling: rotate each baseline through full 360°
+        thetas = np.linspace(0, 2*np.pi, n_times, endpoint=False)
+
+        mask = np.zeros((N, N), dtype=bool)
+        for (bx, by) in baselines:
+            for θ in thetas:
+                # rotate baseline by θ
+                u =  bx * np.cos(θ) - by * np.sin(θ)
+                v =  bx * np.sin(θ) + by * np.cos(θ)
+
+                # map to pixel indices
+                ui = int(round(centre + u))
+                vi = int(round(centre + v))
+                if 0 <= ui < N and 0 <= vi < N:
+                    mask[ui, vi] = True
+
+                # also sample the conjugate point (−u, −v)
+                ui_c = int(round(centre - u))
+                vi_c = int(round(centre - v))
+                if 0 <= ui_c < N and 0 <= vi_c < N:
+                    mask[ui_c, vi_c] = True
+
+        # always include zero-spacing
+        mask[centre, centre] = True
         return mask
+
+
     
     def gaussian_weights(self) -> np.ndarray:
         """
@@ -134,7 +186,7 @@ class RadioImagerCLEAN:
         return b / b.max()
 
     def CLEAN(self, dirty: np.ndarray, psf: np.ndarray,
-              gain: float = 0.3, thresh_frac: float = 1e-5,
+              gain: float = 0.3, thresh_frac: float = 1e-6,
               max_iters: int = 1_000_000) -> tuple[np.ndarray, np.ndarray]:
         """
         Performs CLEAN deconvolution on the dirty image.
