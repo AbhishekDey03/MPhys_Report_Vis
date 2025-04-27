@@ -21,6 +21,7 @@ for ax, img, title in zip(axs, [sky, restored, dirty,psf ],
     ax.imshow(img, origin="lower", cmap="gist_gray")
     ax.set_xlabel(title); ax.set_xticks([]); ax.set_yticks([]) 
 plt.suptitle(f"CLEAN Algorithm Deconvolution of Simulated Radio Sky", fontsize=14)
+plt.tight_layout()
 plt.savefig("CLEAN_Algorithm_Simulation.pdf", dpi=300)
 plt.show()
 
