@@ -7,9 +7,10 @@ plt.rcParams.update({
     "axes.linewidth": 0.7,
 })
 
+fwhm = 0.1
 
 # Simulate a radio imager with CLEAN algorithm
-ri = RadioImagerCLEAN(uv_taper_fwhm_frac=0.1)
+ri = RadioImagerCLEAN(uv_taper_fwhm_frac=fwhm)
 sky, dirty, restored, psf,mask = ri.simulate()
 
 # Plot the resultsss
@@ -19,6 +20,8 @@ for ax, img, title in zip(axs, [sky, restored, psf, dirty],
                           ["True sky","CLEANed","PSF","Dirty"]):
     ax.imshow(img, origin="lower", cmap="gist_gray")
     ax.set_title(title); ax.set_xticks([]); ax.set_yticks([]) 
+plt.suptitle(rf"Radio Imager CLEAN algorithm simulation\n Gaussian tapering FWHM = {fwhm}", fontsize=16)
+
 plt.show()
 
 fig, ax = plt.subplots(1,1, figsize=(8,8))
