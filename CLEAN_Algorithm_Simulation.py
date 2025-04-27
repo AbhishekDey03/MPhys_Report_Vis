@@ -19,26 +19,37 @@ class RadioImagerCLEAN:
         self.fill_frac = fill_frac
         self.uv_taper_fwhm_frac = uv_taper_fwhm_frac
     
-    def generate_sky(self,seed: int=8032003, n_sources: int = 5) -> np.ndarray:
+    def generate_sky(self, seed: int = 8032003, n_sources: int = 5) -> np.ndarray:
         """
-        Generates a sky image containing randomly placed delta function sources.
-
+        Generates a sky image with small Gaussian sources instead of pure delta functions.
+        
         Parameters:
         - seed (int): Random seed for reproducibility.
-        - n_sources (int): Number of point sources to generate.
+        - n_sources (int): Number of sources to generate.
 
         Returns:
         - np.ndarray: 2D array representing the sky brightness distribution.
         """
-
         rng = np.random.default_rng(seed)
         sky = np.zeros((self.image_size, self.image_size), dtype=np.float32)
+        sigma_pix = self.image_size / 300  # width of Gaussian sources (~few pixels)
+
+        y, x = np.indices((self.image_size, self.image_size))
+
         for _ in range(n_sources):
-            l,m = rng.uniform(0.2,0.8,size=2)
-            amp = rng.uniform(0.5,1.0)
-            i,j = int(l * self.image_size), int(m * self.image_size)
-            sky[i, j] = amp
+            l, m = rng.uniform(0.2, 0.8, size=2)
+            amp = rng.uniform(0.5, 1.0)
+            i, j = int(l * self.image_size), int(m * self.image_size)
+            
+            # Create a small 2D Gaussian centered at (i,j)
+            r2 = (x - i)**2 + (y - j)**2
+            source = amp * np.exp(-0.5 * r2 / sigma_pix**2)
+
+            # Add the Gaussian to the sky
+            sky += source
+
         return sky
+
     
     def compute_visibilities(self,sky:np.ndarray)->np.ndarray:
         """
@@ -190,7 +201,7 @@ class RadioImagerCLEAN:
         return b / b.max()
 
     def CLEAN(self, dirty: np.ndarray, psf: np.ndarray,
-              gain: float = 0.3, thresh_frac: float = 1e-6,
+              gain: float = 0.1, thresh_frac: float = 1e-10,
               max_iters: int = 1_000_000) -> tuple[np.ndarray, np.ndarray]:
         """
         Performs CLEAN deconvolution on the dirty image.

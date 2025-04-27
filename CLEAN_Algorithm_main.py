@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 plt.rcParams.update({
     "text.usetex": True,
     "font.family":  "serif",
-    "font.serif":   ["Computer Modern"],
+    "font.serif":   ["Gulliver"],
     "axes.linewidth": 0.7,
 })
 
@@ -14,14 +14,14 @@ ri = RadioImagerCLEAN(uv_taper_fwhm_frac=fwhm)
 sky, dirty, restored, psf,mask = ri.simulate()
 
 # Plot the resultsss
-fig, axs = plt.subplots(2,2, figsize=(8,8))
+fig, axs = plt.subplots(1,4, figsize=(9,3))
 axs = axs.flatten()
-for ax, img, title in zip(axs, [sky, restored, psf, dirty],
-                          ["True sky","CLEANed","PSF","Dirty"]):
+for ax, img, title in zip(axs, [sky, restored, dirty,psf ],
+                          ["(a)True sky","(b)CLEANed image","(c)Dirty image","(d)Point-spread"]):
     ax.imshow(img, origin="lower", cmap="gist_gray")
-    ax.set_title(title); ax.set_xticks([]); ax.set_yticks([]) 
-plt.suptitle(rf"Radio Imager CLEAN algorithm simulation\n Gaussian tapering FWHM = {fwhm}", fontsize=16)
-
+    ax.set_xlabel(title); ax.set_xticks([]); ax.set_yticks([]) 
+plt.suptitle(f"CLEAN Algorithm Deconvolution of Simulated Radio Sky", fontsize=14)
+plt.savefig("CLEAN_Algorithm_Simulation.pdf", dpi=300)
 plt.show()
 
 fig, ax = plt.subplots(1,1, figsize=(8,8))
