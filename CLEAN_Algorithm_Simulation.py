@@ -58,13 +58,13 @@ class RadioImagerCLEAN:
     def sample_uv(self,
                 n_antennas: int = 10,
                 n_times:    int = 240,
-                seed:       int = 0
+                seed:       int =8032003
                 ) -> np.ndarray:
         """
         Simulate Earth-rotation aperture synthesis uv-coverage.
 
-        For a given array of `n_antennas` (randomly laid out in a disk)
-        and `n_times` samples over a full 360° rotation, this builds
+        For a given array of n_antennas (randomly laid out in a disk)
+        and n_times samples over a full 2pi Earth rotation, this builds
         all baselines and rotates them through hour angle to trace uv-tracks.
 
         Parameters
@@ -86,29 +86,31 @@ class RadioImagerCLEAN:
         centre = N // 2
         rng    = np.random.default_rng(seed)
 
-        # 1) Random antenna positions in a disk of radius N/4 pixels
-        φ = rng.uniform(0, 2*np.pi, size=n_antennas)
+        # Random antenna positions in a disk of radius N/4 pixels
+        phi = rng.uniform(0, 2*np.pi, size=n_antennas)
         r = rng.uniform(0, N/4,      size=n_antennas)
-        ant_x = r * np.cos(φ)
-        ant_y = r * np.sin(φ)
+        ant_x = r * np.cos(phi)
+        ant_y = r * np.sin(phi)
 
-        # 2) All unique baselines (i < j)
+        # All unique baselines (i < j)
         baselines = []
         for i in range(n_antennas):
             for j in range(i+1, n_antennas):
+                # Compute the baseline vector (bx,by)
                 baselines.append((ant_x[j] - ant_x[i],
                                 ant_y[j] - ant_y[i]))
         baselines = np.array(baselines)
 
-        # 3) Time sampling: rotate each baseline through full 360°
+        # Time sampling: We measure each baseline at n_times
+        # evenly spaced angles around the circle
         thetas = np.linspace(0, 2*np.pi, n_times, endpoint=False)
 
         mask = np.zeros((N, N), dtype=bool)
         for (bx, by) in baselines:
-            for θ in thetas:
-                # rotate baseline by θ
-                u =  bx * np.cos(θ) - by * np.sin(θ)
-                v =  bx * np.sin(θ) + by * np.cos(θ)
+            for theta in thetas:
+                # rotate baseline by theta
+                u =  bx * np.cos(theta) - by * np.sin(theta)
+                v =  bx * np.sin(theta) + by * np.cos(theta)
 
                 # map to pixel indices
                 ui = int(round(centre + u))
@@ -119,7 +121,9 @@ class RadioImagerCLEAN:
                 # also sample the conjugate point (−u, −v)
                 ui_c = int(round(centre - u))
                 vi_c = int(round(centre - v))
+                # Ennsure conjugate point is within bounds
                 if 0 <= ui_c < N and 0 <= vi_c < N:
+                    # Store conjugate point
                     mask[ui_c, vi_c] = True
 
         # always include zero-spacing
@@ -271,5 +275,5 @@ class RadioImagerCLEAN:
         model, residual = self.CLEAN(dirty, psf)
         restored = self.restore(model, residual, fwhm_pix=self.image_size/200)
 
-        return sky, dirty, restored, psf
+        return sky, dirty, restored, psf,mask
 
