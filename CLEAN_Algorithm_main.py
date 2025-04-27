@@ -7,7 +7,7 @@ plt.rcParams.update({
     "axes.linewidth": 0.7,
 })
 
-fwhm = 0.1
+fwhm = 0.3
 
 # Simulate a radio imager with CLEAN algorithm
 ri = RadioImagerCLEAN(uv_taper_fwhm_frac=fwhm)
@@ -24,7 +24,7 @@ plt.suptitle(f"CLEAN Algorithm Deconvolution of Simulated Radio Sky", fontsize=1
 plt.savefig("CLEAN_Algorithm_Simulation.pdf", dpi=300)
 plt.show()
 
-fig, ax = plt.subplots(1,1, figsize=(8,8))
+"""fig, ax = plt.subplots(1,1, figsize=(8,8))
 ax.imshow(mask, origin="lower", cmap="gist_gray")
 ax.set_title(r"$(u,v)$ sampling mask"); ax.set_xticks([]); ax.set_yticks([])
-plt.show()
+plt.show()"""

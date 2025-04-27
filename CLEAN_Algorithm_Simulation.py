@@ -32,7 +32,7 @@ class RadioImagerCLEAN:
         """
         rng = np.random.default_rng(seed)
         sky = np.zeros((self.image_size, self.image_size), dtype=np.float32)
-        sigma_pix = self.image_size / 300  # width of Gaussian sources (~few pixels)
+        sigma_pix = self.image_size / 200  # width of Gaussian sources (~few pixels)
 
         y, x = np.indices((self.image_size, self.image_size))
 
