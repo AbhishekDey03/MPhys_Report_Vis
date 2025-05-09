@@ -8,6 +8,7 @@ plt.rcParams.update({
     "text.usetex": True,
     "font.family":  "serif",
     "font.serif":   ["Computer Modern"],
+    "text.latex.preamble": r"\usepackage{amsmath}",
     "axes.linewidth": 0.7,
 })
 
